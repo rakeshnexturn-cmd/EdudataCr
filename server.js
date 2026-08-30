@@ -50,6 +50,8 @@ app.post('/api/run', (req, res) => {
     ...process.env,
     HEADLESS: headless !== false ? 'true' : 'false',
     BROWSER: browser || 'chromium',
+    // HEALED: Keep Chromium inside the deployed app bundle so Render runtime can find it.
+    PLAYWRIGHT_BROWSERS_PATH: '0',
   };
 
   testRunning = true;
@@ -63,7 +65,8 @@ app.post('/api/run', (req, res) => {
   testProcess = spawn(args[0], args.slice(1), {
     cwd: __dirname,
     env,
-    shell: true,
+    // HEALED: shell mode is unnecessary on Render and causes the DEP0190 warning.
+    shell: process.platform === 'win32',
   });
 
   testProcess.stdout.on('data', (data) => {
