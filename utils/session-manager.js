@@ -81,15 +81,19 @@ class SessionManager {
       throw new Error('ECA_CLIENT_KEY and ECA_EXECUTION_USER must be set in .env');
     }
 
-    if (!fs.existsSync(PRIVATE_KEY_PATH)) {
+    // HEALED: Render does not receive ignored certificate files; load the PEM from a base64 secret there, with local-file support for development.
+    let privateKeyPem;
+    if (process.env.ECA_PRIVATE_KEY_BASE64) {
+      privateKeyPem = Buffer.from(process.env.ECA_PRIVATE_KEY_BASE64, 'base64').toString('utf8');
+    } else if (process.env.ECA_PRIVATE_KEY) {
+      privateKeyPem = process.env.ECA_PRIVATE_KEY.replace(/\\n/g, '\n');
+    } else if (fs.existsSync(PRIVATE_KEY_PATH)) {
+      privateKeyPem = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
+    } else {
       throw new Error(
-        `Private key not found at: ${PRIVATE_KEY_PATH}\n` +
-        'Generate: Run scripts/generate-cert.ps1 or create a self-signed certificate'
+        `Private key not found. Set ECA_PRIVATE_KEY_BASE64 or ECA_PRIVATE_KEY, or provide ${PRIVATE_KEY_PATH}`
       );
     }
-
-    // Read the PEM private key
-    const privateKeyPem = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
 
     // Create the JWT
     const now = Math.floor(Date.now() / 1000);

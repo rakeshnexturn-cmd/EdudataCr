@@ -9,3 +9,5 @@ services:
         value: production
       - key: PORT
         value: 3000
+      - key: ECA_PRIVATE_KEY_BASE64
+        sync: false
