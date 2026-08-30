@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salesforce Education Cloud - E2E Test Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+      border-bottom: 1px solid #334155;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .header .subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .header .sf-logo {
+      width: 40px;
+      height: 40px;
+      background: #00a1e0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      color: white;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .status-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px 20px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .status-card .icon.blue { background: #1e3a5f; color: #60a5fa; }
+    .status-card .icon.green { background: #14532d; color: #4ade80; }
+    .status-card .icon.red { background: #7f1d1d; color: #f87171; }
+    .status-card .icon.yellow { background: #713f12; color: #facc15; }
+
+    .status-card .info h3 { font-size: 20px; font-weight: 700; }
+    .status-card .info p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #334155;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-body {
+      padding: 20px;
+    }
+
+    .test-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .test-item {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .test-item:hover {
+      border-color: #3b82f6;
+      background: #172554;
+    }
+
+    .test-item.selected {
+      border-color: #3b82f6;
+      background: #172554;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+
+    .test-item .test-name {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .test-item .test-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .test-item .badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge.pending { background: #334155; color: #94a3b8; }
+    .badge.running { background: #1e3a5f; color: #60a5fa; animation: pulse 2s infinite; }
+    .badge.passed { background: #14532d; color: #4ade80; }
+    .badge.failed { background: #7f1d1d; color: #f87171; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .config-section {
+      margin-top: 20px;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .config-row:last-child { border-bottom: none; }
+
+    .config-row label {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #334155;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle.active { background: #3b82f6; }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle.active::after { transform: translateX(20px); }
+
+    select.config-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-danger:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #334155;
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover { background: #475569; }
+
+    .log-container {
+      height: 400px;
+      overflow-y: auto;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 16px;
+      background: #0f172a;
+      border-radius: 8px;
+    }
+
+    .log-entry {
+      padding: 2px 0;
+      display: flex;
+      gap: 12px;
+    }
+
+    .log-entry .timestamp {
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    .log-entry .message {
+      color: #cbd5e1;
+      word-break: break-all;
+    }
+
+    .log-entry .message.pass { color: #4ade80; }
+    .log-entry .message.fail { color: #f87171; }
+    .log-entry .message.info { color: #60a5fa; }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #334155;
+      border-radius: 2px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .progress-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      animation: progress-indeterminate 1.5s infinite;
+    }
+
+    @keyframes progress-indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+
+    .result-summary {
+      margin-top: 20px;
+      padding: 16px;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+
+    .result-row .label { color: #94a3b8; }
+    .result-row .value { font-weight: 600; }
+    .result-row .value.pass { color: #4ade80; }
+    .result-row .value.fail { color: #f87171; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #64748b;
+    }
+
+    .empty-state .icon { font-size: 32px; margin-bottom: 12px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .status-bar { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Salesforce Education Cloud - E2E Test Suite</h1>
+    <div class="subtitle">Student Payment Flow Automation Dashboard</div>
+  </div>
+  <div class="sf-logo">SF</div>
+</div>
+
+<div class="container">
+  <div class="status-bar">
+    <div class="status-card">
+      <div class="icon blue">T</div>
+      <div class="info">
+        <h3 id="totalTests">2</h3>
+        <p>Total Tests</p>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="icon green">P</div>
+      <div class="info">
+        <h3 id="passedCount">0</h3>
+        <p>Passed</p>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="icon red">F</div>
+      <div class="info">
+        <h3 id="failedCount">0</h3>
+        <p>Failed</p>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="icon yellow">R</div>
+      <div class="info">
+        <h3 id="runTime">--:--</h3>
+        <p>Run Time</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span>&#9881;</span> Test Configuration
+        </div>
+        <div class="panel-body">
+          <div class="test-list">
+            <div class="test-item" data-test="tc01" onclick="selectTest(this)">
+              <span class="badge pending" id="badge-tc01">Pending</span>
+              <div class="test-name">TC01 - Full E2E Payment Flow</div>
+              <div class="test-desc">Complete lifecycle: Person Account &rarr; Community User &rarr; Order &rarr; Invoice &rarr; Payment &rarr; Validation</div>
+            </div>
+            <div class="test-item" data-test="tc02" onclick="selectTest(this)">
+              <span class="badge pending" id="badge-tc02">Pending</span>
+              <div class="test-name">TC02 - Existing Person Multiple Payments</div>
+              <div class="test-desc">Reuses last Person Account for multiple payment scenarios without creating new accounts</div>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <div class="config-row">
+              <label>Headless Mode</label>
+              <div class="toggle active" id="toggle-headless" onclick="toggleSwitch(this)"></div>
+            </div>
+            <div class="config-row">
+              <label>Browser</label>
+              <select class="config-select" id="select-browser">
+                <option value="chromium" selected>Chromium</option>
+                <option value="firefox">Firefox</option>
+                <option value="webkit">WebKit</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btn-run" onclick="runTests()">
+              &#9654; Run Selected
+            </button>
+            <button class="btn btn-danger" id="btn-stop" onclick="stopTests()" disabled>
+              &#9632; Stop
+            </button>
+          </div>
+          <div class="progress-bar" id="progress-bar" style="display:none;">
+            <div class="fill"></div>
+          </div>
+
+          <div class="result-summary" id="result-summary" style="display:none;">
+            <div class="result-row">
+              <span class="label">Status</span>
+              <span class="value" id="result-status">--</span>
+            </div>
+            <div class="result-row">
+              <span class="label">Exit Code</span>
+              <span class="value" id="result-exit">--</span>
+            </div>
+            <div class="result-row">
+              <span class="label">Started</span>
+              <span class="value" id="result-start">--</span>
+            </div>
+            <div class="result-row">
+              <span class="label">Completed</span>
+              <span class="value" id="result-end">--</span>
+            </div>
+            <div class="btn-group" style="margin-top:12px;">
+              <button class="btn btn-secondary" onclick="window.open('/playwright-report/index.html','_blank')">
+                View HTML Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>&#9776;</span> Live Test Output
+      </div>
+      <div class="log-container" id="log-container">
+        <div class="empty-state">
+          <div class="icon">&#128196;</div>
+          <p>Select tests and click "Run Selected" to start execution</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedTests = [];
+  let pollingInterval = null;
+  let runStartTime = null;
+
+  function selectTest(el) {
+    const testId = el.dataset.test;
+    el.classList.toggle('selected');
+    
+    if (selectedTests.includes(testId)) {
+      selectedTests = selectedTests.filter(t => t !== testId);
+    } else {
+      selectedTests.push(testId);
+    }
+  }
+
+  function toggleSwitch(el) {
+    el.classList.toggle('active');
+  }
+
+  function addLogEntry(message, type = '') {
+    const container = document.getElementById('log-container');
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    const time = new Date().toLocaleTimeString();
+    
+    let msgClass = '';
+    if (message.includes('passed') || message.includes('PASSED') || message.includes('✓')) msgClass = 'pass';
+    else if (message.includes('failed') || message.includes('FAILED') || message.includes('✗') || message.includes('Error')) msgClass = 'fail';
+    else if (message.includes('Starting') || message.includes('Phase')) msgClass = 'info';
+
+    entry.innerHTML = `<span class="timestamp">${time}</span><span class="message ${msgClass}">${escapeHtml(message)}</span>`;
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function runTests() {
+    if (selectedTests.length === 0) {
+      alert('Please select at least one test to run');
+      return;
+    }
+
+    const btnRun = document.getElementById('btn-run');
+    const btnStop = document.getElementById('btn-stop');
+    const progressBar = document.getElementById('progress-bar');
+
+    btnRun.disabled = true;
+    btnStop.disabled = false;
+    progressBar.style.display = 'block';
+
+    const headless = document.getElementById('toggle-headless').classList.contains('active');
+    const browser = document.getElementById('select-browser').value;
+
+    const tests = selectedTests.length === 2 ? 'all' : selectedTests[0];
+
+    runStartTime = Date.now();
+    updateRunTime();
+    
+    addLogEntry(`Starting test run: ${tests}`, 'info');
+    addLogEntry(`Browser: ${browser} | Headless: ${headless}`, 'info');
+
+    try {
+      const response = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tests, headless, browser }),
+      });
+      
+      const data = await response.json();
+      if (data.error) {
+        addLogEntry(`Error: ${data.error}`, 'fail');
+        btnRun.disabled = false;
+        btnStop.disabled = true;
+        progressBar.style.display = 'none';
+        return;
+      }
+
+      addLogEntry(`Test process started (PID: ${data.pid})`, 'info');
+      
+      selectedTests.forEach(t => {
+        document.getElementById(`badge-${t}`).className = 'badge running';
+        document.getElementById(`badge-${t}`).textContent = 'Running';
+      });
+
+      startPolling();
+    } catch (err) {
+      addLogEntry(`Failed to start tests: ${err.message}`, 'fail');
+      btnRun.disabled = false;
+      btnStop.disabled = true;
+      progressBar.style.display = 'none';
+    }
+  }
+
+  function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    
+    let lastLogIndex = 0;
+    
+    pollingInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+
+        if (data.logs && data.logs.length > lastLogIndex) {
+          for (let i = lastLogIndex; i < data.logs.length; i++) {
+            addLogEntry(data.logs[i].message);
+          }
+          lastLogIndex = data.logs.length;
+        }
+
+        if (!data.running && data.lastResult) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+          handleTestComplete(data.lastResult);
+        }
+      } catch (err) {
+        // ignore polling errors
+      }
+    }, 1500);
+  }
+
+  function handleTestComplete(result) {
+    const btnRun = document.getElementById('btn-run');
+    const btnStop = document.getElementById('btn-stop');
+    const progressBar = document.getElementById('progress-bar');
+
+    btnRun.disabled = false;
+    btnStop.disabled = true;
+    progressBar.style.display = 'none';
+
+    selectedTests.forEach(t => {
+      const badge = document.getElementById(`badge-${t}`);
+      if (result.status === 'passed') {
+        badge.className = 'badge passed';
+        badge.textContent = 'Passed';
+      } else {
+        badge.className = 'badge failed';
+        badge.textContent = 'Failed';
+      }
+    });
+
+    const summary = document.getElementById('result-summary');
+    summary.style.display = 'block';
+    
+    const statusEl = document.getElementById('result-status');
+    statusEl.textContent = result.status.toUpperCase();
+    statusEl.className = `value ${result.status === 'passed' ? 'pass' : 'fail'}`;
+    
+    document.getElementById('result-exit').textContent = result.exitCode ?? '--';
+    document.getElementById('result-start').textContent = result.startTime ? new Date(result.startTime).toLocaleString() : '--';
+    document.getElementById('result-end').textContent = result.endTime ? new Date(result.endTime).toLocaleString() : '--';
+
+    if (result.status === 'passed') {
+      document.getElementById('passedCount').textContent = selectedTests.length;
+      document.getElementById('failedCount').textContent = '0';
+    } else {
+      document.getElementById('failedCount').textContent = selectedTests.length;
+      document.getElementById('passedCount').textContent = '0';
+    }
+
+    addLogEntry(`Test run completed: ${result.status.toUpperCase()}`, result.status === 'passed' ? 'pass' : 'fail');
+  }
+
+  async function stopTests() {
+    try {
+      await fetch('/api/stop', { method: 'POST' });
+      addLogEntry('Stop signal sent', 'fail');
+    } catch (err) {
+      addLogEntry(`Failed to stop: ${err.message}`, 'fail');
+    }
+  }
+
+  function updateRunTime() {
+    if (!runStartTime) return;
+    const elapsed = Math.floor((Date.now() - runStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('runTime').textContent = `${mins}:${secs}`;
+    requestAnimationFrame(() => setTimeout(updateRunTime, 1000));
+  }
+
+  async function checkInitialStatus() {
+    try {
+      const response = await fetch('/api/status');
+      const data = await response.json();
+      if (data.running) {
+        document.getElementById('btn-run').disabled = true;
+        document.getElementById('btn-stop').disabled = false;
+        document.getElementById('progress-bar').style.display = 'block';
+        startPolling();
+      }
+      if (data.lastResult) {
+        handleTestComplete(data.lastResult);
+      }
+    } catch (err) {
+      // server not available
+    }
+  }
+
+  checkInitialStatus();
+</script>
+
+</body>
+</html>

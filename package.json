@@ -1,0 +1,21 @@
+{
+  "name": "salesforce-e2e-payment-flow",
+  "version": "1.0.0",
+  "description": "Salesforce Education Cloud E2E Student Payment Flow Automation",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:tc01": "npx playwright test tc01_full_e2e_student_payment.spec.js",
+    "test:tc02": "npx playwright test tc02_existing_person_payment.spec.js",
+    "test:headed": "npx playwright test --headed",
+    "test:ui": "npx playwright test --ui",
+    "dashboard": "node server.js",
+    "report": "npx playwright show-report"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.52.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsforce": "^3.10.24",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
