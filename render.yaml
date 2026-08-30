@@ -9,5 +9,7 @@ services:
         value: production
       - key: PORT
         value: 3000
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: '0'
       - key: ECA_PRIVATE_KEY_BASE64
         sync: false
