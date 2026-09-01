@@ -50,9 +50,12 @@ app.post('/api/run', (req, res) => {
     ...process.env,
     HEADLESS: headless !== false ? 'true' : 'false',
     BROWSER: browser || 'chromium',
-    // HEALED: Keep Chromium inside the deployed app bundle so Render runtime can find it.
-    PLAYWRIGHT_BROWSERS_PATH: '0',
   };
+  
+  // HEALED: Only use bundled Chromium on Render/CI environments; local dev uses default path
+  if (process.env.CI || process.env.RENDER) {
+    env.PLAYWRIGHT_BROWSERS_PATH = '0';
+  }
 
   testRunning = true;
   lastResult = { status: 'running', startTime: new Date().toISOString(), tests };
