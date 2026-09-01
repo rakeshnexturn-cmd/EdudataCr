@@ -33,6 +33,9 @@ const TestData = {
     expiry: process.env.STRIPE_EXPIRY || '12/30',
     cvv: process.env.STRIPE_CVV || '123',
   },
+  account: {
+    name: process.env.TEST_ACCOUNT_NAME || 'Hare Krishna',
+  },
   urls: {
     base: process.env.SF_BASE_URL,
     community: process.env.COMMUNITY_URL,

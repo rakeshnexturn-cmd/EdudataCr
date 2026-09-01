@@ -52,16 +52,16 @@ test.describe('TC02 Existing Person Account - Two Academic Order Cycles', () => 
     await account.navigate();
     const search = page.getByRole('searchbox').first();
     await expect(search).toBeVisible();
-    // HEALED: TC02 must reuse the requested existing Person Account, Hare Krishna.
-    const existingAccountName = 'Hare Krishna';
+    // HEALED: TC02 must reuse the requested existing Person Account, configured via TEST_ACCOUNT_NAME env var.
+    const existingAccountName = TestData.account.name;
     await search.fill(existingAccountName);
-    // HEALED: Scope the account link to Hare Krishna's table row to avoid split-view duplicates.
+    // HEALED: Scope the account link to the configured account row to avoid split-view duplicates.
     const accountRow = page.getByRole('row', { name: new RegExp(existingAccountName, 'i') }).last();
     const accountLink = accountRow.getByRole('link', { name: new RegExp(`^${existingAccountName}$`, 'i') });
     await expect(accountLink).toBeVisible({ timeout: 15000 });
     await accountLink.click();
     const accountName = existingAccountName;
-    // HEALED: Split view keeps the list URL; the row-scoped Hare Krishna link identifies the account.
+    // HEALED: Split view keeps the list URL; the row-scoped account link identifies the account.
 
     const pages = {
       order: new OrderPage(page), invoice: new InvoicePage(page),
