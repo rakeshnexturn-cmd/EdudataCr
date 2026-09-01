@@ -360,9 +360,130 @@
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
+    /* .env Editor Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #334155;
+      color: #e2e8f0;
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .env-editor {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      color: #e2e8f0;
+      font-size: 13px;
+      line-height: 1.6;
+      flex: 1;
+      resize: none;
+    }
+
+    .env-editor:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #334155;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .env-status {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+      display: none;
+    }
+
+    .env-status.success {
+      background: #14532d;
+      color: #4ade80;
+      display: block;
+    }
+
+    .env-status.error {
+      background: #7f1d1d;
+      color: #f87171;
+      display: block;
+    }
+
     @media (max-width: 900px) {
       .main-grid { grid-template-columns: 1fr; }
       .status-bar { flex-direction: column; }
+      .modal-content { width: 95%; max-height: 90vh; }
     }
   </style>
 </head>
@@ -443,6 +564,10 @@
             </div>
           </div>
 
+          <button class="btn btn-secondary" onclick="openEnvEditor()" style="width: 100%; margin-top: 12px;">
+            ⚙️ Manage .env Configuration
+          </button>
+
           <div class="btn-group">
             <button class="btn btn-primary" id="btn-run" onclick="runTests()">
               &#9654; Run Selected
@@ -492,6 +617,24 @@
           <p>Select tests and click "Run Selected" to start execution</p>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- .env Editor Modal -->
+<div class="modal" id="env-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📝 Manage Environment Configuration (.env)</h2>
+      <button class="modal-close" onclick="closeEnvEditor()">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea class="env-editor" id="env-textarea" placeholder="Loading .env file..."></textarea>
+      <div class="env-status" id="env-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEnvEditor()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEnvFile()">💾 Save .env</button>
     </div>
   </div>
 </div>
@@ -706,6 +849,72 @@
   }
 
   checkInitialStatus();
+
+  // .env Editor Functions
+  async function openEnvEditor() {
+    const textarea = document.getElementById('env-textarea');
+    const modal = document.getElementById('env-modal');
+    
+    textarea.placeholder = 'Loading .env file...';
+    textarea.disabled = true;
+    modal.classList.add('active');
+    
+    try {
+      const response = await fetch('/api/env');
+      const data = await response.json();
+      
+      if (data.success) {
+        textarea.value = data.content;
+        textarea.disabled = false;
+        textarea.focus();
+      } else {
+        showEnvStatus('Error: ' + (data.error || 'Failed to load .env'), 'error');
+        textarea.placeholder = 'Error loading .env file. Check console for details.';
+      }
+    } catch (err) {
+      showEnvStatus('Error: ' + err.message, 'error');
+      textarea.placeholder = 'Error loading .env file';
+    }
+  }
+
+  function closeEnvEditor() {
+    document.getElementById('env-modal').classList.remove('active');
+    document.getElementById('env-status').style.display = 'none';
+  }
+
+  async function saveEnvFile() {
+    const textarea = document.getElementById('env-textarea');
+    const content = textarea.value;
+    
+    textarea.disabled = true;
+    
+    try {
+      const response = await fetch('/api/env', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showEnvStatus('✓ .env file saved successfully!', 'success');
+        setTimeout(() => closeEnvEditor(), 1500);
+      } else {
+        showEnvStatus('Error: ' + (data.error || 'Failed to save .env'), 'error');
+      }
+    } catch (err) {
+      showEnvStatus('Error: ' + err.message, 'error');
+    } finally {
+      textarea.disabled = false;
+    }
+  }
+
+  function showEnvStatus(message, type) {
+    const statusEl = document.getElementById('env-status');
+    statusEl.textContent = message;
+    statusEl.className = `env-status ${type}`;
+  }
 </script>
 
 </body>

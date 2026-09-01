@@ -124,6 +124,28 @@ app.get('/api/results', (req, res) => {
   res.json({ reportExists: exists, lastResult });
 });
 
+app.get('/api/env', (req, res) => {
+  try {
+    const envPath = path.join(__dirname, '.env');
+    const content = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+    res.json({ content, success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message, success: false });
+  }
+});
+
+app.post('/api/env', (req, res) => {
+  try {
+    const { content } = req.body;
+    const envPath = path.join(__dirname, '.env');
+    fs.writeFileSync(envPath, content, 'utf-8');
+    addLog('[Dashboard] .env file updated via dashboard');
+    res.json({ success: true, message: '.env file saved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message, success: false });
+  }
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
 });
