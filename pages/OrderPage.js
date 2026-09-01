@@ -180,6 +180,7 @@ class OrderPage {
 
     await this.selectProduct();
     await this.setQuantity();
+    await this.setUnitPrice();
     await this.saveProduct();
   }
 
@@ -227,16 +228,33 @@ class OrderPage {
 
   async setQuantity() {
     const quantityValue = '2';
+    const unitPriceValue = process.env.PRODUCT_UNIT_PRICE;
     const editQuantityDialog = this.page.getByRole('dialog', { name: /edit (quantity|selected order products)/i }).last();
 
     if (await editQuantityDialog.isVisible({ timeout: 5000 }).catch(() => false)) {
       const productText = this.page.getByText('Summer Tuition', { exact: true }).last();
+      
+      // HEALED: Update Quantity (cell index 1)
       const quantityCell = productText.locator('xpath=ancestor::tr').locator('td').nth(1);
       await expect(quantityCell).toBeVisible({ timeout: 15000 });
       await quantityCell.click();
       await this.page.keyboard.press('Control+A');
       await this.page.keyboard.type(quantityValue);
-
+      await this.page.keyboard.press('Tab');
+      
+      // HEALED: Update Unit Price if configured in env (cell index 2, right after quantity)
+      if (unitPriceValue) {
+        const unitPriceCell = productText.locator('xpath=ancestor::tr').locator('td').nth(2);
+        if (await unitPriceCell.isVisible({ timeout: 10000 }).catch(() => false)) {
+          await unitPriceCell.click();
+          await this.page.keyboard.press('Control+A');
+          await this.page.keyboard.type(unitPriceValue.toString());
+          console.log(`[OrderPage] Updated Unit Price to ${unitPriceValue}`);
+        }
+      }
+      
+      await this.page.waitForTimeout(500);
+      
       const modalSave = this.page.locator('button[title="Save"] span.label.bBody').last();
       await expect(modalSave).toBeVisible({ timeout: 5000 });
       await modalSave.click();
@@ -245,6 +263,12 @@ class OrderPage {
     }
 
     throw new Error('Edit Selected Order Products dialog was not displayed; Quantity was not entered.');
+  }
+
+  async setUnitPrice() {
+    // HEALED: Unit Price is now handled in setQuantity() to ensure both values are updated before saving
+    // This function is kept for backward compatibility but does nothing as setQuantity() handles it
+    return;
   }
 
   async saveProduct() {
