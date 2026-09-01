@@ -1,5 +1,7 @@
-// HEALED: Resolve browsers from the deployed app bundle on Render.
-process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '0';
+// HEALED: Resolve browsers from the deployed app bundle on Render (only in CI/Render).
+if (process.env.CI || process.env.RENDER) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '0';
+}
 const { defineConfig, devices } = require('@playwright/test');
 require('dotenv').config();
 
