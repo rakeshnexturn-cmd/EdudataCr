@@ -34,11 +34,16 @@ class SessionManager {
    */
   getLoginUrl() {
     const baseUrl = process.env.SF_BASE_URL || '';
+    console.log(`[SessionManager] SF_BASE_URL configured: ${baseUrl || '(missing)'}`);
     const myDomainMatch = baseUrl.match(/https?:\/\/([^.]+)\.(?:lightning\.force|my\.salesforce)\.com/);
     if (myDomainMatch) {
-      return `https://${myDomainMatch[1]}.my.salesforce.com`;
+      const loginUrl = `https://${myDomainMatch[1]}.my.salesforce.com`;
+      console.log(`[SessionManager] Derived login URL from SF_BASE_URL: ${loginUrl}`);
+      return loginUrl;
     }
-    return process.env.SF_LOGIN_URL || 'https://login.salesforce.com';
+    const fallbackUrl = process.env.SF_LOGIN_URL || 'https://login.salesforce.com';
+    console.log(`[SessionManager] SF_BASE_URL did not match myDomain pattern; using fallback SF_LOGIN_URL: ${fallbackUrl}`);
+    return fallbackUrl;
   }
 
   /**
@@ -57,6 +62,8 @@ class SessionManager {
     }
 
     console.log('[SessionManager] Authenticating via JWT Bearer Flow...');
+    console.log(`[SessionManager] Auth config summary: ECA_CLIENT_KEY present=${!!process.env.ECA_CLIENT_KEY} ECA_EXECUTION_USER=${process.env.ECA_EXECUTION_USER || '(missing)'}`);
+    console.log(`[SessionManager] Private key sources: ECA_PRIVATE_KEY_BASE64=${!!process.env.ECA_PRIVATE_KEY_BASE64} ECA_PRIVATE_KEY=${!!process.env.ECA_PRIVATE_KEY} localFile=${fs.existsSync(PRIVATE_KEY_PATH)}`);
     const session = await this.loginWithJwtBearer();
     this.adminSession = session;
     this.saveSessionCache(ADMIN_SESSION_FILE, session);
@@ -132,12 +139,17 @@ class SessionManager {
 
     if (tokenResponse.error) {
       const desc = tokenResponse.error_description || '';
+      console.error(`[SessionManager] JWT token exchange returned error: ${tokenResponse.error}`);
+      console.error(`[SessionManager] JWT error description: ${desc}`);
       throw new Error(`JWT auth failed: ${tokenResponse.error} - ${desc}`);
     }
 
     if (!tokenResponse.access_token) {
+      console.error('[SessionManager] JWT token response did not include access_token:', JSON.stringify(tokenResponse));
       throw new Error(`No access_token: ${JSON.stringify(tokenResponse)}`);
     }
+
+    console.log(`[SessionManager] Token exchange success: instanceUrl=${tokenResponse.instance_url || '(missing)'} accessTokenLength=${tokenResponse.access_token.length}`);
 
     // Get user info
     let userInfo = {};
@@ -172,27 +184,36 @@ class SessionManager {
     const sid = sessionData.accessToken;
     const instanceUrl = sessionData.instanceUrl;
 
+    console.log(`[SessionManager] Browser login start: instanceUrl=${instanceUrl} baseUrl=${baseUrl}`);
+    console.log(`[SessionManager] Frontdoor SID preview=${sid ? `${sid.slice(0, 8)}...${sid.slice(-8)}` : '(missing)'}`);
+
     // frontdoor.jsp creates a browser session from an API token
     const frontdoorUrl = `${instanceUrl}/secur/frontdoor.jsp?sid=${encodeURIComponent(sid)}`;
-    console.log(`[SessionManager] Establishing browser session via frontdoor.jsp...`);
+    console.log(`[SessionManager] Establishing browser session via frontdoor.jsp: ${frontdoorUrl}`);
 
+    const gotoStart = Date.now();
     await page.goto(frontdoorUrl, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     });
+    const gotoElapsed = Date.now() - gotoStart;
+    console.log(`[SessionManager] page.goto(frontdoor.jsp) completed in ${gotoElapsed}ms; current URL=${page.url()}`);
 
     // Wait for Salesforce UI to render (not domcontentloaded — SF loads too many background resources)
     await page.waitForTimeout(8000);
+    console.log(`[SessionManager] After waitForTimeout, current URL=${page.url()}`);
 
     // Verify session
     const isLoggedIn = await this.verifySession(page);
     if (!isLoggedIn) {
       // Fallback: set cookies + navigate
       console.log('[SessionManager] frontdoor.jsp did not establish session, trying cookie injection...');
+      const cookieStart = Date.now();
       await this.injectSessionViaCookies(page, sessionData);
+      console.log(`[SessionManager] Cookie injection completed in ${Date.now() - cookieStart}ms; final URL=${page.url()}`);
     }
 
-    console.log('[SessionManager] Browser session established');
+    console.log(`[SessionManager] Browser session established. Final URL=${page.url()}`);
     return true;
   }
 
@@ -270,6 +291,7 @@ class SessionManager {
                    url.includes('/secur') || url.includes('salesforce.com');
     const isOnLogin = url.includes('login') || url.includes('Login');
 
+    console.log(`[SessionManager] verifySession checks done. URL=${url} isOnSF=${isOnSF} isOnLogin=${isOnLogin}`);
     if (isOnSF && !isOnLogin) {
       console.log(`[SessionManager] Session verified via URL: ${url}`);
       return true;
@@ -310,16 +332,28 @@ class SessionManager {
         },
       };
 
+      console.log(`[SessionManager] POST ${url}`);
       const req = https.request(options, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch { reject(new Error(`Invalid JSON: ${data}`)); }
+          console.log(`[SessionManager] HTTP POST response status=${res.statusCode} bodyLength=${data.length}`);
+          try {
+            const parsed = JSON.parse(data);
+            const preview = JSON.stringify(parsed).slice(0, 500);
+            console.log(`[SessionManager] HTTP POST parsed response preview=${preview}`);
+            resolve(parsed);
+          } catch (err) {
+            console.error(`[SessionManager] Invalid JSON from POST ${url}: ${data.slice(0, 500)}`);
+            reject(new Error(`Invalid JSON: ${data}`));
+          }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => {
+        console.error(`[SessionManager] HTTP POST failed for ${url}: ${err.message}`);
+        reject(err);
+      });
       req.write(postData);
       req.end();
     });
@@ -336,16 +370,21 @@ class SessionManager {
         headers: { 'Authorization': `Bearer ${authorization}` },
       };
 
+      console.log(`[SessionManager] GET ${url}`);
       const req = https.request(options, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch { resolve(data); }
+          console.log(`[SessionManager] HTTP GET response status=${res.statusCode} bodyLength=${data.length}`);
+          try { const parsed = JSON.parse(data); console.log(`[SessionManager] HTTP GET parsed response preview=${JSON.stringify(parsed).slice(0, 500)}`); resolve(parsed); }
+          catch { console.log(`[SessionManager] HTTP GET raw response preview=${data.slice(0, 500)}`); resolve(data); }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => {
+        console.error(`[SessionManager] HTTP GET failed for ${url}: ${err.message}`);
+        reject(err);
+      });
       req.end();
     });
   }
