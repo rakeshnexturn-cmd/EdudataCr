@@ -11,8 +11,8 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  // HEALED: JWT frontdoor authentication and Lightning bootstrap can exceed Playwright's 30-second default.
-  timeout: 120000,
+  // HEALED: JWT frontdoor authentication and Lightning bootstrap can exceed Playwright's default timeout on Render.
+  timeout: parseInt(process.env.PLAYWRIGHT_TIMEOUT || '180000'),
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['list']

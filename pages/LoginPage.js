@@ -65,21 +65,20 @@ class LoginPage {
   }
 
   async verifyLoginSuccess() {
-    await this.page.waitForTimeout(3000);
-
     const url = this.page.url();
-    console.log(`[LoginPage] Current URL: ${url}`);
+    console.log(`[LoginPage] Current URL after auth: ${url}`);
 
-    // If we're NOT on a login page, we're logged in
+    // If we're NOT on a login page, the session is established.
     if (!url.includes('/login') && !url.includes('/Login') && !url.includes('login.salesforce.com')) {
       console.log('[LoginPage] Login verified — not on login page');
-      return;
+      return true;
     }
 
-    // Fallback: check for any Salesforce UI element
+    // Fallback: ensure the login page is no longer showing the username field.
     await expect(
       this.page.locator('#username').first()
-    ).not.toBeVisible({ timeout: 10000 });
+    ).not.toBeVisible({ timeout: 15000 });
+    return true;
   }
 
   async isMfaPage() {
