@@ -382,9 +382,9 @@
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 12px;
-      width: 90%;
-      max-width: 800px;
-      max-height: 80vh;
+      width: min(92vw, 1100px);
+      height: min(90vh, 900px);
+      max-height: calc(100vh - 40px);
       display: flex;
       flex-direction: column;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -428,6 +428,7 @@
     .modal-body {
       padding: 20px 24px;
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -438,12 +439,14 @@
       background: #0f172a;
       border: 1px solid #334155;
       border-radius: 8px;
-      padding: 16px;
+      padding: 18px;
       color: #e2e8f0;
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 14px;
+      line-height: 1.7;
+      min-height: 68vh;
+      height: 100%;
       flex: 1;
-      resize: none;
+      resize: vertical;
     }
 
     .env-editor:focus {
